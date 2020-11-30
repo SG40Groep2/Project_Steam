@@ -9,4 +9,4 @@ Lesly Oudshoorn (TI)
 # Instructies 
 
 zorg dat alle bestanden in één map zit. 
-Voer het bestand Steam_dashboard_GUI.py uit. 
+Voer het bestand Steam_Dashboard_GUI.py uit. 
