@@ -6,6 +6,7 @@ from PIL import Image, ImageTk
 import time
 import RPi.GPIO as GPIO
 
+ahmed_id = 76561198298331661
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(0)
@@ -31,8 +32,10 @@ class Data:
     @staticmethod
     def get_friends():
         key = '66D8DC4C544F361B28D4D5491FE8F07A'
+        ahmed_id = 76561198298331661
+        ruben_id = 76561198841435984
         friend_list = requests.get(
-            f'http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key={key}&steamid=76561198298331661&relationship=friend')
+            f'http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key={key}&steamid={ahmed_id}&relationship=friend')
         json = friend_list.json()
         return json
 
@@ -53,52 +56,74 @@ class Data:
 
     # Functie voor TI gedeelte, dus niet aankomen
     @staticmethod
-    def get_online_info():
-        vriend_id = Data.get_friends()["friendslist"]["friends"][0]["steamid"]
+    def get_online_info(id):
+        ahmed_id = 76561198298331661
+        ruben_id = 76561198841435984
         key = '66D8DC4C544F361B28D4D5491FE8F07A'
         profile = requests.get(
-            f' http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={key}&steamids={vriend_id}&format=json')
+            f' http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={key}&steamids={id}&format=json')
         json = profile.json()
         return json
 
-    # Functies voor TI gedeelte, dus niet aangekomen
+
+    @staticmethod
+    def joo(lijst, id):
+        loper = 0
+        while True:
+            if lijst[loper] == id:
+                return loper
+            else:
+                loper+= 1
+    #  nodig = hoeveelste plek staat de id van lijst in de get_online_info
+
+
     @staticmethod
     def verwerk_online_info():
         eindresultaat_offline = []
         eindresultaat_online = []
-        laatst_online = []
-        aantal_vrienden = len(Data.get_online_info()["response"]["players"])  # De hoeveelheid vrienden
-        print(f'aantal vrienden        :    {len(Data.get_online_info()["response"]["players"])}')
+        aantal_vrienden = len(Data.get_friends()['friendslist']['friends'])  # De hoeveelheid vrienden
+        vrienden_ids = Data.get_friends()['friendslist']['friends']
+        print(Data.get_friends())
+        print(f'aantal vrienden        :    {aantal_vrienden}')
+        lijst_vriend_ids = []
+        for x in range(aantal_vrienden):
+            lijst_vriend_ids.append(vrienden_ids[x]['steamid'])
+        print(lijst_vriend_ids)
+        loper = 0
         for x in range(aantal_vrienden):  # elke vriend langsgaan
-            nummer = Data.get_online_info()["response"]["players"][x]["personastate"]
-            gamernaam = Data.get_online_info()["response"]["players"][x]["personaname"]
-            id = Data.get_online_info()["response"]["players"][x]["steamid"]
-            foto = Data.get_online_info()["response"]["players"][x]["avatarfull"]
-            lastlogof = Data.get_online_info()["response"]["players"][x]['lastlogoff']
+            id = Data.get_online_info(lijst_vriend_ids[loper])["response"]["players"][0]["steamid"]
+            print(id)
+            # index_lijst_vriend_ids = Data.joo(lijst_vriend_ids, id)
+            nummer = Data.get_online_info(lijst_vriend_ids[loper])["response"]["players"][0]["personastate"]
+            gamernaam = Data.get_online_info(lijst_vriend_ids[loper])["response"]["players"][0]["personaname"]
+            print(gamernaam)
+            print(Data.get_online_info(lijst_vriend_ids[loper])["response"]["players"][0])
+            foto = Data.get_online_info(lijst_vriend_ids[loper])["response"]["players"][0]["avatarfull"]
             if nummer == 0 or nummer == 2 or nummer == 3 or nummer == 4:  # als de vriend offline is, dan geeft ie deze variabelen mee.
                 keuze = f'Offline'
                 eindresultaat_offline += [id, gamernaam, keuze, foto]
             elif nummer == 1 or nummer == 6 or nummer == 7:  # als de vriend online is, dan geeft ie deze variabelen mee.
                 keuze = f'Online'
                 eindresultaat_online += [id, gamernaam, keuze, foto]
-            laatst_online += [(id, lastlogof)]  # register voor wie er het laatst online was
-        print(f'lijst id en lastlogoff:     {laatst_online}')
-        laatst_online.sort(key=Data.tweedeblokje, reverse=True)  # sorteren van de lijst
+            loper += 1
 
         aantal_online = len(eindresultaat_online) // 3
         aantal_offline = len(eindresultaat_offline) // 3
-        print(f'aantal mens(en) offline:    {aantal_offline} \naantal mens(en) online:     {aantal_online}')
+        print(f'aantal mens(en) offline:    {aantal_offline}\naantal mens(en) online:     {aantal_online}')
+        print(eindresultaat_online)
 
-        almost = Data.offline_online(aantal_vrienden, aantal_online, eindresultaat_online, eindresultaat_offline,
-                                     laatst_online)  # functie aanroepen voor welke gegevens er gepakt moeten worden
+        almost = Data.offline_online(aantal_vrienden, aantal_online, eindresultaat_online, eindresultaat_offline)  # functie aanroepen voor welke gegevens er gepakt moeten worden
+        print(almost)
         if aantal_vrienden == 2:
-            foto1 = Data.verwerk_foto(almost[3])  # De foto door de functie halen zodat de foto werkt
-            almost[3] = foto1  # De foto vervangen
-            foto2 = Data.verwerk_foto(almost[7])
-            almost[7] = foto2
+            foto1 = Data.verwerk_foto(almost[0][3])  # De foto door de functie halen zodat de foto werkt
+            almost[0][3] = foto1  # De foto vervangen
+            foto2 = Data.verwerk_foto(almost[1][3])
+            almost[1][3] = foto2
+            print('2')
         elif aantal_vrienden == 1:
             foto1 = Data.verwerk_foto(almost[3])
             almost[3] = foto1
+            print('1')
         elif aantal_vrienden == 3:
             foto1 = Data.verwerk_foto(almost[3])
             almost[3] = foto1
@@ -106,10 +131,12 @@ class Data:
             almost[7] = foto2
             foto3 = Data.verwerk_foto(almost[11])
             almost[11] = foto3
-        return almost, aantal_online
+            print('3')
+        print(almost)
+        return almost
 
     @staticmethod
-    def offline_online(aantal_vrienden, aantal_online, eindresultaat_online, eindresultaat_offline, laatst_online):
+    def offline_online(aantal_vrienden, aantal_online, eindresultaat_online, eindresultaat_offline):
         if aantal_vrienden >= 3:
             if aantal_online == 3 or aantal_online > 3:
                 totaallijst = []
@@ -118,37 +145,24 @@ class Data:
                 return totaallijst
             elif aantal_online == 2:
                 totaallijst = [eindresultaat_online]
-                offline_persoon_id = laatst_online[0][0]  # id van de persoon die laatst online is.
-                index_id = eindresultaat_offline.index(offline_persoon_id)  # index van de persoons id in de lijst
-                totaallijst += [eindresultaat_offline[index_id], eindresultaat_offline[index_id + 1],
-                                eindresultaat_offline[index_id + 2],
-                                eindresultaat_offline[index_id + 3]]  # gegevens toevoegen
+                totaallijst += [eindresultaat_offline[0], eindresultaat_offline[1],
+                                eindresultaat_offline[2], eindresultaat_offline[3]]  # gegevens toevoegen
                 return totaallijst
             elif aantal_online == 1:
                 totaallijst = [eindresultaat_online]
-                offline_persoon_id1 = laatst_online[0][0]
-                index_id1 = eindresultaat_offline.index(offline_persoon_id1)
-                totaallijst += [eindresultaat_offline[index_id1], eindresultaat_offline[index_id1 + 1],
-                                eindresultaat_offline[index_id1 + 2], eindresultaat_offline[index_id1 + 3]]
-                offline_persoon_id2 = laatst_online[1][0]
-                index_id2 = eindresultaat_offline.index(offline_persoon_id2)
-                totaallijst += [eindresultaat_offline[index_id2], eindresultaat_offline[index_id2 + 1],
-                                eindresultaat_offline[index_id2 + 2], eindresultaat_offline[index_id2 + 3]]
+                totaallijst += [eindresultaat_offline[0], eindresultaat_offline[1],
+                                eindresultaat_offline[2], eindresultaat_offline[3],
+                                eindresultaat_offline[4], eindresultaat_offline[5],
+                                eindresultaat_offline[6], eindresultaat_offline[7]]
                 return totaallijst
             elif aantal_online == 0:
                 totaallijst = []
-                offline_persoon_id1 = laatst_online[0][0]
-                index_id1 = eindresultaat_offline.index(offline_persoon_id1)
-                totaallijst += [eindresultaat_offline[index_id1], eindresultaat_offline[index_id1 + 1],
-                                eindresultaat_offline[index_id1 + 2], eindresultaat_offline[index_id1 + 3]]
-                offline_persoon_id2 = laatst_online[1][0]
-                index_id2 = eindresultaat_offline.index(offline_persoon_id2)
-                totaallijst += [eindresultaat_offline[index_id2], eindresultaat_offline[index_id2 + 1],
-                                eindresultaat_offline[index_id2 + 2], eindresultaat_offline[index_id2 + 3]]
-                offline_persoon_id3 = laatst_online[2][0]
-                index_id3 = eindresultaat_offline.index(offline_persoon_id3)
-                totaallijst += [eindresultaat_offline[index_id3], eindresultaat_offline[index_id3 + 1],
-                                eindresultaat_offline[index_id3 + 2], eindresultaat_offline[index_id3 + 3]]
+                totaallijst += [eindresultaat_offline[0], eindresultaat_offline[1],
+                                eindresultaat_offline[2], eindresultaat_offline[3],
+                                eindresultaat_offline[4], eindresultaat_offline[5],
+                                eindresultaat_offline[6], eindresultaat_offline[7],
+                                eindresultaat_offline[8], eindresultaat_offline[9],
+                                eindresultaat_offline[10], eindresultaat_offline[11]]
         else:
             if aantal_vrienden == 0:
                 return 'f0, je hebt geen vrienden'
@@ -159,16 +173,15 @@ class Data:
                     return eindresultaat_offline  # gegevens van deze ene offline vriend
             elif aantal_vrienden == 2:
                 if aantal_online == aantal_vrienden:
+                    print('jo')
                     return eindresultaat_online  # gegevens van deze 2 online vrienden
                 elif aantal_online == 0:
                     return eindresultaat_offline  # gegevens van deze 2 offline vrienden
                 else:
                     totaallijst = [eindresultaat_online, eindresultaat_offline]
+                    print(totaallijst)
                     return totaallijst  # gegevens van deze 2 vrienden, 1 off 1 on
 
-    @staticmethod
-    def tweedeblokje(element):
-        return element[1]
 
     @staticmethod
     def verwerk_foto(foto):
@@ -180,7 +193,7 @@ class Data:
 
         tk_image = ImageTk.PhotoImage(pil_image)
         return tk_image
-    try:
+
     @staticmethod
     def apa102_send_bytes(clock_pin, data_pin, bytes):
         for byte in bytes:
@@ -216,10 +229,10 @@ class Data:
 
     @staticmethod
     def gedachte_neopixels():
-        aantal_vrienden = len(Data.get_online_info()["response"]["players"])
+        aantal_vrienden = len(Data.get_online_info(ahmed_id)["response"]["players"])
         aantal_online = 0
         for x in range(aantal_vrienden):
-            nummer = Data.get_online_info()["response"]["players"][x]["personastate"]
+            nummer = Data.get_online_info(ahmed_id)["response"]["players"][x]["personastate"]
             if nummer == 1 or nummer == 6 or nummer == 7:
                 aantal_online += 1
         if aantal_online > 8:
@@ -239,5 +252,5 @@ class Data:
         Data.apa102(clock_pin, data_pin, knipperen)
         time.sleep(1.5)
 
-
-Data.gedachte_neopixels()
+aantal_vrienden = len(Data.get_online_info(ahmed_id)["response"]["players"])
+# for x in range(aantal_vrienden):
